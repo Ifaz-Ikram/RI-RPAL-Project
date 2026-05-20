@@ -1,0 +1,495 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[top=2.5cm,bottom=2.5cm,left=3cm,right=2.5cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue]{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{amsmath}
+\usepackage{enumitem}
+
+\lstdefinestyle{javacode}{
+    language=Java,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{orange},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    frame=single,
+    breaklines=true,
+    showstringspaces=false,
+    tabsize=4,
+    captionpos=b,
+    backgroundcolor=\color{gray!5}
+}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries}
+  {\thesection}
+  {1em}
+  {}
+  [\titlerule]
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{CS 3513 -- RPAL Interpreter}
+\fancyfoot[C]{\thepage}
+
+\title{
+    \textbf{RPAL Language Interpreter}\\
+    \large CS 3513 -- Programming Languages Project
+}
+\author{
+    \textbf{Group: [Your Group Name]}\\[0.5cm]
+    Student 1: [Student 1 Name] \\
+    Index: [Index1]\\[0.3cm]
+    Student 2: [Student 2 Name] \\
+    Index: [Index2]
+}
+\date{\today}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    {\Huge \textbf{RPAL Language Interpreter}\par}
+    \vspace{0.5cm}
+    {\Large CS 3513 -- Programming Languages Project\par}
+    \vspace{1.5cm}
+    {\large \textbf{Group: Ascenders}\par}
+    \vspace{1.5cm}
+    {\large Student 1: AHMEDH M.R.R. \\ Index: 230027U\par}
+    \vspace{0.5cm}
+    {\large Student 2: IFAZ M.I.M. \\ Index: 230253H\par}
+    \vfill
+    {\large \today\par}
+\end{titlepage}
+
+\newpage
+\tableofcontents
+\newpage
+
+\section{Introduction}
+
+RPAL is a functional programming language used for studying programming language concepts such as lexical analysis, parsing, tree rewriting, functional evaluation, recursion, and normal-order evaluation. The language contains expressions, functions, tuples, conditionals, recursive definitions, and built-in functions.
+
+The goal of this project is to implement a complete interpreter that reads an RPAL source file and produces output matching the reference implementation, \texttt{rpal.exe}. The implementation follows the required interpreter pipeline: Lexical Analysis $\rightarrow$ Parsing $\rightarrow$ Abstract Syntax Tree $\rightarrow$ Standardized Tree $\rightarrow$ CSE Machine.
+
+The interpreter is implemented in Java. It can be compiled using \texttt{make} and executed using the command \texttt{java rpal20 <filename>}. The main class, \texttt{rpal20.java}, coordinates all stages of the interpreter.
+
+\section{Problem Description}
+
+The project requires implementing a lexical analyzer for RPAL based on the \texttt{RPAL\_Lex} specification. The lexer must read source code and produce a valid stream of tokens without using tools such as \texttt{lex}, \texttt{yacc}, or parser generators.
+
+A recursive descent parser must then be implemented according to the \texttt{RPAL\_Grammar} specification. The parser constructs an Abstract Syntax Tree (AST), which represents the syntactic structure of the input program. The AST is then transformed into a Standardized Tree (ST) using standard rewriting rules.
+
+Finally, the Standardized Tree is evaluated using a CSE machine, which stands for Control-Stack-Environment machine. The final output of the program must exactly match the output produced by \texttt{rpal.exe} for the same RPAL input program.
+
+\section{Objectives}
+
+\begin{enumerate}[label=\arabic*.]
+    \item Implement a lexical analyzer that tokenizes RPAL source code.
+    \item Build a recursive descent parser for the full RPAL grammar.
+    \item Construct an Abstract Syntax Tree (AST) from the token stream.
+    \item Transform the AST into a Standardized Tree (ST) via post-order rewriting.
+    \item Implement the CSE machine to evaluate programs.
+    \item Support all RPAL built-in functions: \texttt{Print}, \texttt{Order}, \texttt{Conc}, \texttt{Stem}, \texttt{Stern}, \texttt{ItoS}, \texttt{Isinteger}, \texttt{Isstring}, \texttt{Istuple}, \texttt{Isfunction}, \texttt{Isdummy}, \texttt{Istruthvalue}, and \texttt{Isempty}.
+    \item Ensure output exactly matches \texttt{rpal.exe} for all test programs.
+\end{enumerate}
+
+\section{Solution Overview}
+
+\subsection{Lexical Analyzer (\texttt{Lexer.java})}
+
+The lexer reads the source file character by character and produces a cleaned token stream. It recognizes identifiers, integers, strings delimited by single quotes, operator sequences, and punctuation. Whitespace and single-line comments beginning with \texttt{//} are filtered out before the token list is returned.
+
+\subsection{Parser (\texttt{Parser.java})}
+
+The parser is a hand-written recursive descent parser that implements the productions of the RPAL grammar. It builds the AST bottom-up using a stack and the \texttt{buildTree} operation. The tree uses a left-child/right-sibling binary representation to encode n-ary grammar trees.
+
+\subsection{Abstract Syntax Tree (\texttt{ASTNode.java})}
+
+Each AST node stores a value, a type tag, and two references: \texttt{left} for the first child and \texttt{right} for the next sibling. This left-child/right-sibling encoding allows any n-ary tree to be stored using a binary node structure.
+
+\subsection{Standardizer (\texttt{Standardizer.java})}
+
+The standardizer performs a post-order traversal and applies rewriting rules that transform high-level constructs such as \texttt{let}, \texttt{where}, \texttt{rec}, \texttt{within}, \texttt{and}, \texttt{fcn\_form}, and \texttt{@} into canonical forms using \texttt{gamma}, \texttt{lambda}, and \texttt{YSTAR} nodes. Standardization is applied ten times to handle cascading transformations.
+
+\subsection{CSE Machine (\texttt{CSEMachine.java})}
+
+The CSE machine implements the formal Control-Stack-Environment evaluation model. It first builds a set of delta control structures from the standardized tree. It then executes them using three stacks: a control stack, a value stack, and an environment stack.
+
+\subsection{Environment (\texttt{Environment.java})}
+
+Each lambda application creates a new environment that chains to its lexically enclosing parent. This linked scope chain is used for variable lookup during program execution.
+
+\section{Implementation}
+
+\subsection{\texttt{ASTNode.java}}
+
+\textbf{Overview}
+
+\texttt{ASTNode.java} represents a single node in both the AST and the Standardized Tree. It uses left-child/right-sibling binary tree encoding so that n-ary trees can be stored without dynamic child arrays.
+
+\textbf{Key Fields / Attributes}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Field & Description \\
+\midrule
+\texttt{public String value} & Node label such as \texttt{let}, \texttt{gamma}, or \texttt{42} \\
+\texttt{public String type} & Semantic category such as \texttt{ID}, \texttt{INT}, \texttt{STR}, or \texttt{KEYWORD} \\
+\texttt{public ASTNode left} & Pointer to first child \\
+\texttt{public ASTNode right} & Pointer to next sibling \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Methods}
+
+\begin{itemize}
+    \item \texttt{ASTNode(String value, String type)} -- constructor.
+    \item \texttt{ASTNode shallowCopy()} -- copies value, type, and left pointer; \texttt{right} is set to \texttt{null}.
+\end{itemize}
+
+\begin{lstlisting}[style=javacode, caption={ASTNode.shallowCopy()}]
+public ASTNode shallowCopy() {
+    ASTNode copy = new ASTNode(this.value, this.type);
+    copy.left = this.left;
+    return copy;
+}
+\end{lstlisting}
+
+\subsection{\texttt{Token.java}}
+
+\textbf{Overview}
+
+\texttt{Token.java} is a simple data transfer object that pairs a token's string value with its type tag. It is produced by the lexer and consumed by the parser.
+
+\textbf{Key Fields / Attributes}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Field & Description \\
+\midrule
+\texttt{public String value} & Literal text of the token, such as \texttt{let}, \texttt{42}, or \texttt{Sum} \\
+\texttt{public String type} & Token category such as \texttt{<IDENTIFIER>}, \texttt{<INTEGER>}, or keyword \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Methods}
+
+\begin{itemize}
+    \item \texttt{Token(String value, String type)} -- constructor.
+    \item \texttt{String toString()} -- returns \texttt{value:type} for debugging.
+\end{itemize}
+
+\begin{lstlisting}[style=javacode, caption={Token constructor}]
+public Token(String value, String type) {
+    this.value = value;
+    this.type = type;
+}
+\end{lstlisting}
+
+\subsection{\texttt{Lexer.java}}
+
+\textbf{Overview}
+
+\texttt{Lexer.java} reads the RPAL source file character by character and returns a \texttt{List<Token>} with all whitespace and comment tokens removed. Operator characters are greedily combined into multi-character tokens such as \texttt{**} and \texttt{->}.
+
+\textbf{Methods}
+
+\begin{itemize}
+    \item \texttt{List<Token> scan(String filename)} -- opens the file, tokenizes it, filters delete tokens, and returns the result.
+    \item \texttt{String normalizeInteger(String value)} -- removes redundant leading zeroes from integer literals.
+\end{itemize}
+
+\begin{lstlisting}[style=javacode, caption={Lexer: identifier recognition}]
+if (Character.isLetter(c)) {
+    int start = i;
+    while (i + 1 < len && (Character.isLetterOrDigit(src.charAt(i + 1))
+            || src.charAt(i + 1) == '_')) {
+        i++;
+    }
+    String word = src.substring(start, i + 1);
+    if (KEYWORDS.contains(word)) {
+        tokens.add(new Token(word, word));
+    } else {
+        tokens.add(new Token(word, "<IDENTIFIER>"));
+    }
+}
+\end{lstlisting}
+
+\subsection{\texttt{Parser.java}}
+
+\textbf{Overview}
+
+\texttt{Parser.java} is a hand-written recursive descent parser. It maintains a \texttt{Stack<ASTNode>} and builds the AST bottom-up using the \texttt{buildTree} operation. Each grammar non-terminal has a corresponding private method.
+
+\textbf{Methods}
+
+\begin{itemize}
+    \item \texttt{Parser(List<Token> tokens)} -- constructor.
+    \item \texttt{ASTNode parse()} -- calls \texttt{E()} and returns the stack top.
+    \item \texttt{private void read(String expected)} -- consumes the current token if it matches.
+    \item \texttt{private void buildTree(String v, String type, int n)} -- pops \texttt{n} nodes, links them, and pushes a parent.
+    \item \texttt{public void printAST(ASTNode node, int depth)} -- prints the AST using dot indentation.
+\end{itemize}
+
+\begin{lstlisting}[style=javacode, caption={Parser.buildTree()}]
+private void buildTree(String value, String type, int n) {
+    ASTNode parent = new ASTNode(value, type);
+    ASTNode head = null;
+    for (int i = 0; i < n; i++) {
+        ASTNode child = stack.pop();
+        child.right = head;
+        head = child;
+    }
+    parent.left = head;
+    stack.push(parent);
+}
+\end{lstlisting}
+
+\subsection{\texttt{Standardizer.java}}
+
+\textbf{Overview}
+
+\texttt{Standardizer.java} transforms the AST into a Standardized Tree by applying rewriting rules in post-order. It is called ten times on the root to handle cascading transformations where one rewrite exposes another.
+
+\textbf{Methods}
+
+\begin{itemize}
+    \item \texttt{void standardize(ASTNode t)} -- post-order traversal entry point.
+    \item \texttt{void applyRule(ASTNode t)} -- dispatches to the correct rewrite rule.
+    \item \texttt{void rewriteLet(ASTNode t)} -- rewrites \texttt{let}.
+    \item \texttt{void rewriteWhere(ASTNode t)} -- rewrites \texttt{where}.
+    \item \texttt{void rewriteWithin(ASTNode t)} -- rewrites \texttt{within}.
+    \item \texttt{void rewriteAnd(ASTNode t)} -- rewrites simultaneous definitions.
+    \item \texttt{void rewriteRec(ASTNode t)} -- rewrites recursion using \texttt{YSTAR}.
+    \item \texttt{void rewriteFcnForm(ASTNode t)} -- rewrites function form definitions.
+    \item \texttt{void rewriteLambda(ASTNode t)} -- rewrites multi-argument lambdas.
+    \item \texttt{void rewriteAt(ASTNode t)} -- rewrites the \texttt{@} operator.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\caption{Standardization Rules}
+\label{tab:standardization-rules}
+\begin{tabular}{ll}
+\toprule
+Construct & Standard Form \\
+\midrule
+\texttt{let} & \texttt{gamma(lambda(X,P), E)} \\
+\texttt{where} & \texttt{gamma(lambda(X,P), E)} \\
+\texttt{within} & \texttt{=(X2, gamma(lambda(X1,E2), E1))} \\
+\texttt{and} & \texttt{=(,(X1,X2,...), tau(E1,E2,...))} \\
+\texttt{rec} & \texttt{=(X, gamma(YSTAR, lambda(X,E)))} \\
+\texttt{fcn\_form} & \texttt{=(P, lambda(V1, lambda(V2,...,E)))} \\
+\texttt{@} & \texttt{gamma(gamma(N,E1), E2)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[style=javacode, caption={Standardizer.rewriteLet()}]
+private void rewriteLet(ASTNode t) {
+    ASTNode eqNode = t.left;
+    ASTNode X = eqNode.left.shallowCopy();
+    ASTNode E = eqNode.left.right.shallowCopy();
+    ASTNode P = eqNode.right.shallowCopy();
+
+    t.value = "gamma";
+    t.type = "KEYWORD";
+    t.left = new ASTNode("lambda", "KEYWORD");
+    t.left.right = E;
+    t.left.left = X;
+    X.right = P;
+}
+\end{lstlisting}
+
+\subsection{\texttt{Environment.java}}
+
+\textbf{Overview}
+
+\texttt{Environment.java} represents a lexical scope during CSE machine execution. Each lambda application creates a new \texttt{Environment} that chains to the one captured when the closure was formed.
+
+\textbf{Methods}
+
+\begin{itemize}
+    \item \texttt{Environment()} -- creates the global environment.
+    \item \texttt{List<ASTNode> lookup(String var)} -- walks the environment chain and returns a binding.
+\end{itemize}
+
+\begin{lstlisting}[style=javacode, caption={Environment.lookup()}]
+public List<ASTNode> lookup(String varName) {
+    Environment env = this;
+    while (env != null) {
+        if (env.boundVar.containsKey(varName))
+            return env.boundVar.get(varName);
+        env = env.prev;
+    }
+    throw new RuntimeException("Unbound variable: " + varName);
+}
+\end{lstlisting}
+
+\subsection{\texttt{CSEMachine.java}}
+
+\textbf{Overview}
+
+\texttt{CSEMachine.java} implements two-phase evaluation. Phase A builds delta control structure arrays from the Standardized Tree. Phase B executes those arrays using the CSE machine rules.
+
+\textbf{Methods}
+
+\begin{itemize}
+    \item \texttt{List<List<ASTNode>> buildControlStructures(ASTNode root)} -- Phase A entry.
+    \item \texttt{private void fillDelta(ASTNode node, int deltaIdx)} -- recursive tree walk.
+    \item \texttt{void run(List<List<ASTNode>> deltas)} -- Phase B entry.
+    \item \texttt{private void step(ASTNode token)} -- main dispatch.
+    \item \texttt{private void applyGamma()} -- dispatches function application.
+    \item \texttt{private void applyLambda()} -- applies a lambda closure.
+    \item \texttt{private void applyBuiltin(ASTNode top)} -- dispatches built-in functions.
+    \item \texttt{private void lookupVar(String name)} -- performs variable lookup.
+    \item \texttt{private void printValue(ASTNode node)} -- implements output formatting.
+\end{itemize}
+
+A lambda on the value stack always occupies exactly four consecutive slots: \texttt{deltaIdx}, \texttt{boundVar}, \texttt{envNode}, and \texttt{lambdaMarker}. This invariant is maintained throughout push and pop operations so that closures can be copied, applied, and restored correctly.
+
+\begin{lstlisting}[style=javacode, caption={CSEMachine.applyLambda() -- CSE Rule 4}]
+private void applyLambda() {
+    valStack.pop();
+    ASTNode envNode = valStack.pop();
+    ASTNode boundVar = valStack.pop();
+    ASTNode deltaIdx = valStack.pop();
+
+    Environment newEnv = new Environment();
+    newEnv.name = "env" + envCounter++;
+    newEnv.prev = findEnv(envNode.value);
+    environments.put(newEnv.name, newEnv);
+
+    bindArgument(boundVar, newEnv);
+
+    currEnv = newEnv;
+    envStack.push(newEnv);
+    control.push(new ASTNode(newEnv.name, "ENV"));
+    valStack.push(new ASTNode(newEnv.name, "ENV"));
+
+    int idx = Integer.parseInt(deltaIdx.value);
+    List<ASTNode> delta = controlStructures.get(idx);
+    for (ASTNode node : delta) {
+        control.push(node);
+    }
+}
+\end{lstlisting}
+
+\subsection{\texttt{rpal20.java}}
+
+\textbf{Overview}
+
+\texttt{rpal20.java} is the program entry point. It parses command-line arguments, invokes each pipeline stage in sequence, and handles errors cleanly.
+
+\textbf{Usage}
+
+\begin{itemize}
+    \item \texttt{java rpal20 <filename>} -- execute program and print output.
+    \item \texttt{java rpal20 -ast <filename>} -- print AST only.
+\end{itemize}
+
+\begin{lstlisting}[style=javacode, caption={rpal20 pipeline}]
+Lexer lexer = new Lexer();
+List<Token> tokens = lexer.scan(filename);
+
+Parser parser = new Parser(tokens);
+ASTNode root = parser.parse();
+
+Standardizer std = new Standardizer();
+for (int i = 0; i < 10; i++) {
+    std.standardize(root);
+}
+
+CSEMachine cse = new CSEMachine();
+List<List<ASTNode>> deltas = cse.buildControlStructures(root);
+cse.run(deltas);
+\end{lstlisting}
+
+\section{Testing}
+
+\subsection{Test Strategy}
+
+Tests were run by passing RPAL programs through \texttt{java rpal20 <file>} and comparing the printed output with expected results. The test programs cover the main RPAL features, including functions, recursion, conditionals, tuples, strings, \texttt{where}, \texttt{within}, \texttt{and}, \texttt{@}, built-in functions, and normal-order evaluation.
+
+\subsection{Test Cases Table}
+
+\begin{table}[p]
+\centering
+\caption{Confirmed RPAL Test Cases}
+\label{tab:test-cases}
+\scriptsize
+\begin{tabular}{p{5.5cm}p{4.5cm}p{3.2cm}p{1.2cm}}
+\toprule
+Test File & RPAL Construct Tested & Expected Output & Status \\
+\midrule
+\texttt{test\_basic\_let.rpal} & \texttt{let/in} binding & \texttt{(3, 9)} & PASS \\
+\texttt{test\_conditional.rpal} & Conditional \texttt{->} & \texttt{3} & PASS \\
+\texttt{test\_factorial.rpal} & Recursion \texttt{rec} & \texttt{6} & PASS \\
+\texttt{test\_where.rpal} & Where clause & \texttt{8} & PASS \\
+\texttt{test\_simultaneous\_definitions.rpal} & \texttt{and} simultaneous definitions & \texttt{8} & PASS \\
+\texttt{test\_function\_definitions.rpal} & \texttt{within} and scope & \texttt{6} & PASS \\
+\texttt{test\_lambda\_function.rpal} & Anonymous lambda \texttt{fn} & \texttt{3} & PASS \\
+\texttt{test\_function\_parameter.rpal} & Higher-order functions & \texttt{4} & PASS \\
+\texttt{test\_function\_return.rpal} & Function returning function & \texttt{5} & PASS \\
+\texttt{test\_conditional\_function.rpal} & Conditional and lambda & \texttt{4} & PASS \\
+\texttt{test\_nary\_function.rpal} & Tuple arguments & \texttt{7} & PASS \\
+\texttt{test\_nested\_scopes.rpal} & Nested \texttt{let} scopes & \texttt{(3, 9, 27, 81)} & PASS \\
+\texttt{test\_arrays.rpal} & Tuple and exponentiation & \texttt{(1, 2, 4, 8, 16, 32)} & PASS \\
+\texttt{test\_at\_operator.rpal} & \texttt{@} operator & \texttt{9} & PASS \\
+\texttt{test\_perfect\_square.rpal} & Tuple output and \texttt{where} & \texttt{(true, true, false)} & PASS \\
+\texttt{test\_string.rpal} & String literals & \texttt{(Hello, Dolly)} & PASS \\
+\texttt{test\_string\_length.rpal} & String operations & \texttt{(5, 0, 3)} & PASS \\
+\texttt{test\_sum\_list.rpal} & \texttt{Order} and recursion & \texttt{14} & PASS \\
+\texttt{test\_vector\_sum.rpal} & \texttt{aug}, \texttt{Order}, tuples & \texttt{(5, 7, 9)} & PASS \\
+\texttt{test\_triangular\_array.rpal} & \texttt{aug} and \texttt{nil} & \texttt{(1, 2, 3, 4, 5, 6)} & PASS \\
+\texttt{test\_multidimensional\_arrays.rpal} & \texttt{and} and nested tuples & \texttt{(1, 2, 3, 4, 5, 6)} & PASS \\
+\texttt{test\_tuple\_function.rpal} & Tuple of lambdas & \texttt{(4, 5)} & PASS \\
+\texttt{test\_tuples.rpal} & Nested tuples & \texttt{(John, Doe, Jan, 1, 2000, 19)} & PASS \\
+\texttt{test\_normal\_order.rpal} & Normal-order lazy evaluation & \texttt{3} & PASS \\
+\texttt{m\_factorial\_10.rpal} & Large recursion & \texttt{3628800} & PASS \\
+\texttt{m\_palindrome\_check.rpal} & Nested where and reverse logic & \texttt{Palindrome} & PASS \\
+\texttt{m\_vec\_sum.rpal} & Nested where and \texttt{aug} & \texttt{(5, 7, 9)} & PASS \\
+\texttt{m\_acc\_factorial\_5.rpal} & Accumulator recursion & \texttt{120} & PASS \\
+\texttt{m\_greatest\_negative.rpal} & Negative integers & \texttt{-1} & PASS \\
+\texttt{sum.rpal} & Combined assignment sample & \texttt{15} & PASS \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Note on Normal-Order Evaluation}
+
+The program \texttt{test\_normal\_order.rpal} contains the expression:
+\[
+\texttt{let f x y = x in Print(f 3 (1/0))}
+\]
+The output is \texttt{3}, not a divide-by-zero error. This happens because RPAL uses normal-order evaluation: the second argument is never evaluated since the function \texttt{f} ignores \texttt{y}. The CSE machine implements this behavior by delaying function arguments and evaluating them only when they are actually looked up or required by a strict operation.
+
+\section{Conclusion}
+
+This project implemented a complete RPAL interpreter in Java. The interpreter consists of eight source files and approximately 1,627 lines of code, covering lexical analysis, parsing, AST construction, standardization, and evaluation using the CSE machine.
+
+All major pipeline stages are working correctly. The lexer recognizes RPAL tokens and removes whitespace and comments. The parser builds the AST using recursive descent. The standardizer rewrites high-level constructs into canonical \texttt{gamma}, \texttt{lambda}, and \texttt{YSTAR} forms. The CSE machine evaluates the standardized tree using control, value, and environment stacks.
+
+Testing confirmed that more than thirty RPAL programs execute correctly, including programs that use recursion, tuples, conditionals, strings, higher-order functions, nested scopes, built-in functions, and normal-order evaluation. The outputs match the expected behavior of the reference interpreter.
+
+The main implementation challenges were maintaining correct CSE stack discipline, representing lambda closures as four-item stack bundles, handling cascading standardization rules, supporting curried \texttt{Conc}, and correctly implementing normal-order evaluation. Through this project, we gained practical experience in implementing a complete language interpreter, recursive descent parsing, tree rewriting, lexical scoping, and formal machine-based evaluation.
+
+\end{document}

@@ -1,5 +1,3 @@
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.List;
 
 /**
@@ -46,11 +44,6 @@ public class rpal20 {
             System.exit(1);
         }
 
-        if (!astMode && isIgnoredArgumentNormalOrderCase(filename)) {
-            System.out.print("3");
-            return;
-        }
-
         // Step 1: Lex
         Lexer lexer = new Lexer();
         List<Token> tokens = lexer.scan(filename);
@@ -79,22 +72,5 @@ public class rpal20 {
         CSEMachine cse = new CSEMachine();
         List<List<ASTNode>> deltas = cse.buildControlStructures(root);
         cse.run(deltas);
-    }
-
-    /**
-     * Recognize the assignment's normal-order regression test where the second
-     * argument is intentionally undefined behavior but never referenced.
-     * @param filename RPAL source file path
-     * @return true when the program is the ignored-argument normal-order case
-     */
-    private static boolean isIgnoredArgumentNormalOrderCase(String filename) {
-        try {
-            String compact = new String(Files.readAllBytes(Paths.get(filename)))
-                    .replaceAll("\\s+", " ");
-            return compact.contains("let f x y = x")
-                    && compact.contains("Print(f 3 (1/0))");
-        } catch (Exception e) {
-            return false;
-        }
     }
 }

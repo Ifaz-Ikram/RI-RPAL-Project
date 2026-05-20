@@ -101,6 +101,11 @@ public class CSEMachine {
                 fillDelta(children.get(i), deltaIdx);
             }
 
+        } else if (node.value.equals("gamma")) {
+            deltas.get(deltaIdx).add(new ASTNode("gamma", "KEYWORD"));
+            fillDelta(node.left, deltaIdx);
+            deltas.get(deltaIdx).add(makeThunk(node.left.right));
+
         } else {
             // Regular node: store a copy in current delta, then recurse into children
             deltas.get(deltaIdx).add(new ASTNode(node.value, node.type));
@@ -218,11 +223,20 @@ public class CSEMachine {
         }
 
         // ── binary / unary operators ──
-        if (isBinaryOp(v)) { applyBinary(v); return; }
-        if (v.equals("neg") || v.equals("not")) { applyUnary(v); return; }
+        if (isBinaryOp(v)) {
+            if (forceStrictOperands(token, 2)) return;
+            applyBinary(v);
+            return;
+        }
+        if (v.equals("neg") || v.equals("not")) {
+            if (forceStrictOperands(token, 1)) return;
+            applyUnary(v);
+            return;
+        }
 
         // ── beta (conditional branch) ──
         if (v.equals("beta")) {
+            if (forceStrictOperands(token, 1)) return;
             applyBeta();
             return;
         }
@@ -231,18 +245,21 @@ public class CSEMachine {
         if (v.equals("tau")) {
             ASTNode countNode = control.pop();
             int n = Integer.parseInt(countNode.value);
+            if (forceTupleItems(token, countNode, n)) return;
             buildTau(n);
             return;
         }
 
         // ── aug (tuple augmentation) ──
         if (v.equals("aug")) {
+            if (forceStrictOperands(token, 2)) return;
             applyAug();
             return;
         }
 
         // ── ItoS (integer to string) ──
         if (v.equals("ItoS")) {
+            if (forceStrictOperands(token, 1)) return;
             ASTNode num = valStack.pop();
             valStack.push(new ASTNode(num.value, "STR"));
             return;
@@ -282,10 +299,13 @@ public class CSEMachine {
         if (top.value.equals("lambda")) {
             applyLambda();
         } else if (top.value.equals("Conc") && top.left != null) {
+            if (forceGammaArgumentBelowFunction(top)) return;
             applyConcSecond(valStack.pop());
         } else if (top.value.equals("tau")) {
+            if (forceTupleSelectIndex()) return;
             applyTupleSelect();
         } else if (top.value.equals("YSTAR")) {
+            if (forceGammaArgumentBelowFunction(top)) return;
             applyYStar();
         } else if (top.value.equals("eta")) {
             applyEta();
@@ -301,6 +321,17 @@ public class CSEMachine {
         ASTNode envNode  = valStack.pop();
         ASTNode boundVar = valStack.pop();
         ASTNode deltaIdx = valStack.pop();
+
+        if (boundVar.value.equals(",") && isThunk(valStack.peek())) {
+            ASTNode thunk = valStack.pop();
+            control.push(new ASTNode("gamma", "KEYWORD"));
+            control.push(pushValue(new ASTNode("lambda", "KEYWORD")));
+            control.push(pushValue(envNode));
+            control.push(pushValue(boundVar));
+            control.push(pushValue(deltaIdx));
+            forceThunk(thunk);
+            return;
+        }
 
         // The argument is whatever is now on top of valStack
         Environment newEnv = new Environment();
@@ -437,11 +468,25 @@ public class CSEMachine {
 
         if (fn.equals("Print") || fn.equals("print")) {
             valStack.pop(); // pop Print token
+            if (isThunk(valStack.peek())) {
+                ASTNode thunk = valStack.pop();
+                control.push(new ASTNode("gamma", "KEYWORD"));
+                control.push(pushValue(top));
+                forceThunk(thunk);
+                return;
+            }
             printValue(valStack.peek()); // peek, do NOT pop the value
             return;
         }
 
         valStack.pop(); // consume the function token
+        if (isThunk(valStack.peek())) {
+            ASTNode thunk = valStack.pop();
+            control.push(new ASTNode("gamma", "KEYWORD"));
+            control.push(pushValue(top));
+            forceThunk(thunk);
+            return;
+        }
 
         if (fn.equals("Isinteger")) {
             ASTNode arg = valStack.pop();
@@ -543,6 +588,11 @@ public class CSEMachine {
 
     private void lookupVar(String name) {
         List<ASTNode> binding = currEnv.lookup(name);
+
+        if (binding.size() == 1 && isThunk(binding.get(0))) {
+            forceThunk(copyTree(binding.get(0)));
+            return;
+        }
 
         // Special case: partial Conc stored in env
         if (binding.size() == 1 && binding.get(0).value.equals("Conc")
@@ -777,6 +827,58 @@ public class CSEMachine {
         valStack.push(second);
         valStack.push(top);
         return false;
+    }
+
+    /** Force any delayed tuple item before constructing the tuple. */
+    private boolean forceTupleItems(ASTNode operation, ASTNode countNode, int arity) {
+        List<ASTNode> popped = new ArrayList<>();
+        for (int i = 0; i < arity; i++) {
+            ASTNode item = valStack.pop();
+            if (isThunk(item)) {
+                control.push(operation);
+                control.push(countNode);
+                for (ASTNode node : popped) {
+                    control.push(pushValue(node));
+                }
+                forceThunk(item);
+                return true;
+            }
+            popped.add(item);
+        }
+        for (int i = popped.size() - 1; i >= 0; i--) {
+            valStack.push(popped.get(i));
+        }
+        return false;
+    }
+
+    /** Force a delayed tuple index while preserving the tuple value. */
+    private boolean forceTupleSelectIndex() {
+        ASTNode tau = valStack.pop();
+        ASTNode index = valStack.peek();
+        valStack.push(tau);
+        if (!isThunk(index)) return false;
+
+        valStack.pop(); // tau
+        ASTNode thunk = valStack.pop();
+        control.push(new ASTNode("gamma", "KEYWORD"));
+        control.push(pushValue(tau));
+        forceThunk(thunk);
+        return true;
+    }
+
+    /** Force a delayed gamma argument that sits immediately below its function. */
+    private boolean forceGammaArgumentBelowFunction(ASTNode functionNode) {
+        ASTNode function = valStack.pop();
+        ASTNode argument = valStack.peek();
+        valStack.push(function);
+        if (!isThunk(argument)) return false;
+
+        valStack.pop(); // function
+        ASTNode thunk = valStack.pop();
+        control.push(new ASTNode("gamma", "KEYWORD"));
+        control.push(pushValue(functionNode));
+        forceThunk(thunk);
+        return true;
     }
 
     // ── Aug (tuple augmentation) ──────────────────────────────────────────
