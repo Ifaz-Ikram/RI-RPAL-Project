@@ -29,7 +29,6 @@ This project implements a complete RPAL interpreter pipeline with the following 
 | `CSEMachine.java` | Control Stack Environment evaluator |
 | `Makefile` | Build automation for compiling Java source files |
 | `README.md` | Project documentation |
-| `REPORT.md` | Assignment report |
 | `tests/` | RPAL test programs |
 
 ---
