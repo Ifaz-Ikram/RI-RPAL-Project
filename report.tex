@@ -14,6 +14,9 @@
 \usepackage{fancyhdr}
 \usepackage{amsmath}
 \usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{float}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning}
 
 \lstdefinestyle{javacode}{
     language=Java,
@@ -108,6 +111,42 @@ Finally, the Standardized Tree is evaluated using a CSE machine, which stands fo
 \end{enumerate}
 
 \section{Solution Overview}
+
+The interpreter is structured as a sequential pipeline where each stage transforms the program representation before passing it to the next.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    stage/.style={
+        rectangle,
+        rounded corners=5pt,
+        draw=blue!70!black,
+        fill=blue!75!black,
+        text=white,
+        minimum width=2.05cm,
+        minimum height=0.9cm,
+        align=center,
+        font=\bfseries\small
+    },
+    arrow/.style={-{Stealth[length=2.6mm]}, thick, gray!75},
+    artifact/.style={font=\itshape\scriptsize, text=gray!80}
+]
+\node[stage] (source) {Source\\File};
+\node[stage, right=1.55cm of source] (lexer) {Lexer};
+\node[stage, right=1.9cm of lexer] (parser) {Parser};
+\node[stage, below=1.25cm of parser] (std) {Standardizer};
+\node[stage, left=1.15cm of std] (cse) {CSE\\Machine};
+\node[stage, left=1.15cm of cse] (output) {Output};
+
+\draw[arrow] (source) -- (lexer);
+\draw[arrow] (lexer) -- node[artifact, above=4pt] {Token Stream} (parser);
+\draw[arrow] (parser) -- node[artifact, right] {AST} (std);
+\draw[arrow] (std) -- node[artifact, above] {ST} (cse);
+\draw[arrow] (cse) -- (output);
+\end{tikzpicture}
+\caption{Interpreter Pipeline}
+\label{fig:interpreter-pipeline}
+\end{figure}
 
 \subsection{Lexical Analyzer (\texttt{Lexer.java})}
 
@@ -284,7 +323,7 @@ private void buildTree(String value, String type, int n) {
     \item \texttt{void rewriteAt(ASTNode t)} -- rewrites the \texttt{@} operator.
 \end{itemize}
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Standardization Rules}
 \label{tab:standardization-rules}
@@ -431,7 +470,7 @@ Tests were run by passing RPAL programs through \texttt{java rpal20 <file>} and 
 
 \subsection{Test Cases Table}
 
-\begin{table}[p]
+\begin{table}[H]
 \centering
 \caption{Confirmed RPAL Test Cases}
 \label{tab:test-cases}

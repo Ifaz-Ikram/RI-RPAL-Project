@@ -6,6 +6,7 @@ import java.util.List;
  * Usage:
  *   java rpal20 file_name         - run program
  *   java rpal20 -ast file_name    - print AST and exit
+ *   java rpal20 -st file_name     - print standardized tree and exit
  */
 public class rpal20 {
 
@@ -32,15 +33,18 @@ public class rpal20 {
     private static void run(String[] args) {
         String filename = null;
         boolean astMode = false;
+        boolean stMode = false;
 
         if (args.length == 1) {
             filename = args[0];
-        } else if (args.length == 2 && args[0].equals("-ast")) {
-            astMode  = true;
+        } else if (args.length == 2 && (args[0].equals("-ast") || args[0].equals("-st"))) {
+            astMode = args[0].equals("-ast");
+            stMode  = args[0].equals("-st");
             filename = args[1];
         } else {
             System.err.println("Usage: java rpal20 file_name");
             System.err.println("       java rpal20 -ast file_name");
+            System.err.println("       java rpal20 -st file_name");
             System.exit(1);
         }
 
@@ -66,6 +70,10 @@ public class rpal20 {
         Standardizer std = new Standardizer();
         for (int i = 0; i < 10; i++) {
             std.standardize(root);
+        }
+        if (stMode) {
+            parser.printAST(root, 0);
+            return;
         }
 
         // Step 5: Build control structures and execute
