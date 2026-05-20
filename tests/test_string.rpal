@@ -1,0 +1,2 @@
+let Name = 'Dolly'
+in Print ('Hello', Name)

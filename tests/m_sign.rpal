@@ -1,0 +1,2 @@
+let sign n = n gr 0 -> 'Positive' | n ls 0 -> 'Negetive' | 'Zero'
+in Print(sign 1)

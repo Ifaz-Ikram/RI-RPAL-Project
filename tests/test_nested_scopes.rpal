@@ -1,0 +1,7 @@
+let X = 3
+in
+let Sqr X = X**2
+in
+Print (X, Sqr X,
+X * Sqr X,
+Sqr X ** 2)

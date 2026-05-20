@@ -1,0 +1,6 @@
+let rec OddEvenRec n =
+    n eq 1 -> 'Odd' |
+    n eq 0 -> 'Even' |
+    OddEvenRec(n-2)
+
+in Print ( OddEvenRec 3 )

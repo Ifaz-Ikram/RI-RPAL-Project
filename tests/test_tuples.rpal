@@ -1,0 +1,4 @@
+let Bdate = ('Jan', 01, '2000')
+in let Student =
+('John','Doe', Bdate, 19)
+in Print (Student)

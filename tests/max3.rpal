@@ -1,0 +1,5 @@
+let max x y z =
+    (x gr y & x gr z) -> x
+    | y gr z -> y
+    | z
+in Print(max 100 200 50)

@@ -1,0 +1,4 @@
+let isPal num = num eq (getReverse num) -> 'Palindrome' | 'Not Palindrome'
+where getReverse n = getRecReverse n 0
+where rec getRecReverse n r = n eq 0 -> r | getRecReverse (n/10) (r*10 + (n - (n/10)*10))
+in Print(isPal 1232)

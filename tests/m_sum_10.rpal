@@ -1,0 +1,5 @@
+let sum k = sumRec 0 k
+where rec sumRec curr lim =
+    curr eq lim -> lim
+    | curr + (sumRec (curr + 1) lim)
+in Print(sum 10)

@@ -1,0 +1,2 @@
+let f x = fn y. x+y
+in Print (f 3 2)
