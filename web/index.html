@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RPAL Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&family=Material+Symbols+Outlined:wght@400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">R</div>
+        <div>
+          <h1>RPAL Studio</h1>
+          <p><span id="pageTitle">Editor</span> <span class="version-chip">IDE v1.0</span></p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span class="badge" id="modeBadge">Mode: Run</span>
+        <span class="badge" id="statusBadge">Ready</span>
+        <button id="sidebarToggle" type="button">Sidebar</button>
+        <button id="themeToggle" type="button">Dark</button>
+        <a class="button-link" href="#/settings">About</a>
+      </div>
+    </header>
+
+    <aside class="sidebar" id="sidebar">
+      <a class="nav-item active" href="#/editor" data-route="editor"><span class="material-symbols-outlined">code</span> Editor</a>
+      <a class="nav-item" href="#/run" data-route="run"><span class="material-symbols-outlined">terminal</span> Run Output</a>
+      <a class="nav-item" href="#/tree" data-route="tree"><span class="material-symbols-outlined">account_tree</span> Tree Explorer</a>
+      <a class="nav-item" href="#/tokens" data-route="tokens"><span class="material-symbols-outlined">list</span> Tokens</a>
+      <a class="nav-item" href="#/compare" data-route="compare"><span class="material-symbols-outlined">difference</span> Compare</a>
+      <a class="nav-item" href="#/tests" data-route="tests"><span class="material-symbols-outlined">rule</span> Tests</a>
+      <a class="nav-item" href="#/pipeline" data-route="pipeline"><span class="material-symbols-outlined">settings_input_component</span> Pipeline</a>
+      <a class="nav-item" href="#/settings" data-route="settings"><span class="material-symbols-outlined">settings</span> Settings</a>
+    </aside>
+
+    <main class="main">
+      <section class="view editor-view active" data-view="editor">
+        <div class="editor-layout">
+          <div class="ide-panel editor-main">
+            <div class="panel-title">
+              <div>
+                <h2>Source Editor</h2>
+                <p id="editorMeta">Sample program</p>
+              </div>
+              <span id="dirtyIndicator" class="soft-pill">Saved</span>
+            </div>
+            <div class="editor-shell">
+              <pre id="lineNumbers" class="line-numbers">1</pre>
+              <textarea id="codeEditor" spellcheck="false"></textarea>
+            </div>
+            <div class="mini-console">
+              <strong>Last output</strong>
+              <span id="miniConsole">No run yet.</span>
+            </div>
+          </div>
+
+          <aside class="ide-panel action-panel">
+            <h2>Actions</h2>
+            <label class="field-label">Execution mode</label>
+            <div class="segmented">
+              <label><input type="radio" name="mode" value="run" checked><span>Run</span></label>
+              <label><input type="radio" name="mode" value="ast"><span>AST</span></label>
+              <label><input type="radio" name="mode" value="st"><span>ST</span></label>
+            </div>
+            <button id="runButton" class="primary-button" type="button">Run Ctrl+Enter</button>
+            <button id="tokensButton" type="button">Show Tokens</button>
+            <button id="compareButton" type="button">Compare AST/ST</button>
+            <label class="field-label">Upload file</label>
+            <input id="fileInput" type="file" accept=".rpal,text/plain">
+            <label class="field-label">Sample</label>
+            <select id="sampleSelect">
+              <option value="">Select from tests/</option>
+            </select>
+            <div class="button-grid">
+              <button id="loadSampleButton" type="button">Load</button>
+              <button id="runSampleButton" type="button">Run</button>
+            </div>
+            <div class="stats-grid">
+              <div><strong id="lineCount">0</strong><span>Lines</span></div>
+              <div><strong id="charCount">0</strong><span>Chars</span></div>
+              <div><strong id="lastFile">Sample</strong><span>File</span></div>
+            </div>
+            <button id="clearButton" type="button">Clear Editor</button>
+          </aside>
+        </div>
+      </section>
+
+      <section class="view output-view" data-view="output">
+        <div class="view-header">
+          <div>
+            <h2>Run Output</h2>
+            <p>stdout, stderr, exit status, and likely error category.</p>
+          </div>
+          <div class="toolbar">
+            <button id="runAgainButton" type="button">Run Again</button>
+            <button id="copyButton" type="button">Copy</button>
+            <button id="downloadOutputButton" type="button">Download</button>
+            <a class="button-link" href="#/editor">Back to Editor</a>
+          </div>
+        </div>
+        <div class="output-grid">
+          <section class="output-card stdout-card">
+            <h3>stdout</h3>
+            <pre id="stdoutBox">No run yet.</pre>
+          </section>
+          <section class="output-card stderr-card">
+            <h3>stderr</h3>
+            <pre id="stderrBox">No errors.</pre>
+          </section>
+          <section class="output-card">
+            <h3>Exit Code</h3>
+            <div id="exitCodeBox" class="big-number">-</div>
+          </section>
+          <section class="output-card">
+            <h3>Possible Cause</h3>
+            <p id="causeBox">Run a program to classify failures.</p>
+          </section>
+        </div>
+      </section>
+
+      <section class="view tree-view" data-view="tree">
+        <div class="graph-shell">
+          <div class="graph-toolbar">
+            <div class="segmented">
+              <label><input type="radio" name="treeMode" value="ast" checked><span>AST</span></label>
+              <label><input type="radio" name="treeMode" value="st"><span>ST</span></label>
+            </div>
+            <button id="buildTreeButton" type="button">Build Tree</button>
+            <button id="fitTreeButton" type="button">Fit</button>
+            <button id="resetTreeButton" type="button">Reset</button>
+            <button id="expandTreeButton" type="button">Expand All</button>
+            <button id="collapseTreeButton" type="button">Collapse All</button>
+            <input id="treeSearchInput" type="search" placeholder="Search nodes">
+            <button id="downloadSvgButton" type="button">Download SVG</button>
+            <button id="fullscreenTreeButton" type="button">Fullscreen</button>
+          </div>
+          <div class="graph-body">
+            <div id="treeCanvas" class="tree-canvas">
+              <div class="empty-state">Run AST or ST to render the tree.</div>
+            </div>
+            <aside class="inspector">
+              <h3>Node Inspector</h3>
+              <dl>
+                <dt>Label</dt>
+                <dd id="nodeLabel">None selected</dd>
+                <dt>Type</dt>
+                <dd id="nodeType">-</dd>
+                <dt>Depth</dt>
+                <dd id="nodeDepth">-</dd>
+                <dt>Children</dt>
+                <dd id="nodeChildren">-</dd>
+              </dl>
+              <details class="raw-drawer">
+                <summary>Raw Tree Text</summary>
+                <pre id="rawTreeText">Run AST or ST to view raw tree output.</pre>
+              </details>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="view tokens-view" data-view="tokens">
+        <div class="view-header">
+          <div>
+            <h2>Lexer Tokens</h2>
+            <p>Inspect the token stream produced by Lexer.java.</p>
+          </div>
+          <div class="toolbar">
+            <button id="refreshTokensButton" type="button">Refresh Tokens</button>
+            <input id="tokenSearch" type="search" placeholder="Search tokens">
+            <select id="tokenTypeFilter">
+              <option value="">All token types</option>
+            </select>
+          </div>
+        </div>
+        <div class="token-summary" id="tokenSummary"></div>
+        <div class="table-wrap">
+          <table class="tokens-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Value</th>
+                <th>Type</th>
+              </tr>
+            </thead>
+            <tbody id="tokensBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="view compare-view" data-view="compare">
+        <div class="view-header">
+          <div>
+            <h2>AST vs Standardized Tree</h2>
+            <p>Standardization rewrites RPAL surface constructs into core CSE-friendly forms.</p>
+          </div>
+          <button id="refreshCompareButton" type="button">Refresh Comparison</button>
+        </div>
+        <div class="compare-layout">
+          <section>
+            <div class="compare-title">
+              <h3>AST</h3><button id="fitAstButton" type="button">Fit</button>
+            </div>
+            <div id="astCompareCanvas" class="tree-canvas"></div>
+          </section>
+          <section>
+            <div class="compare-title">
+              <h3>Standardized Tree</h3><button id="fitStButton" type="button">Fit</button>
+            </div>
+            <div id="stCompareCanvas" class="tree-canvas"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view tests-view" data-view="tests">
+        <div class="view-header">
+          <div>
+            <h2>Test Browser</h2>
+            <p>Load and run programs from the tests/ folder.</p>
+          </div>
+          <input id="testSearch" type="search" placeholder="Search test files">
+        </div>
+        <div class="tests-layout">
+          <div id="testsList" class="tests-list"></div>
+          <aside class="test-preview">
+            <h3 id="previewName">Select a test</h3>
+            <pre id="previewCode">No file selected.</pre>
+          </aside>
+        </div>
+      </section>
+
+      <section class="view pipeline-view" data-view="pipeline">
+        <div class="doc-page">
+          <h2>Interpreter Pipeline</h2>
+          <div class="pipeline-strip" id="pipelineStrip">
+            <span data-stage="source">Source</span><span data-stage="lexer">Lexer</span><span
+              data-stage="parser">Parser</span><span data-stage="ast">AST</span><span data-stage="st">ST</span><span
+              data-stage="cse">CSE</span><span data-stage="output">Output</span>
+          </div>
+          <div class="doc-grid">
+            <article>
+              <h3>Source</h3>
+              <p>RPAL code typed, uploaded, or loaded from tests.</p><b>web/script.js</b>
+            </article>
+            <article>
+              <h3>Lexer</h3>
+              <p>Converts source text into tokens.</p><b>Lexer.java</b>
+            </article>
+            <article>
+              <h3>Parser</h3>
+              <p>Builds the AST from tokens.</p><b>Parser.java</b>
+            </article>
+            <article>
+              <h3>AST</h3>
+              <p>Raw grammar tree using left-child/right-sibling nodes.</p><b>ASTNode.java</b>
+            </article>
+            <article>
+              <h3>ST</h3>
+              <p>Standardized tree for evaluation.</p><b>Standardizer.java</b>
+            </article>
+            <article>
+              <h3>CSE</h3>
+              <p>Evaluates control structures with environments.</p><b>CSEMachine.java</b>
+            </article>
+            <article>
+              <h3>Output</h3>
+              <p>Captured stdout, stderr, and visual demo data.</p><b>RpalWebServer.java</b>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="view settings-view" data-view="settings">
+        <div class="doc-page">
+          <h2>Settings & About</h2>
+          <div class="doc-grid">
+            <article>
+              <h3>Theme</h3>
+              <p>Use the topbar toggle to switch light/dark mode. The choice is saved locally.</p>
+            </article>
+            <article>
+              <h3>Shortcuts</h3>
+              <p><b>Ctrl+Enter</b> runs the current editor program.</p>
+            </article>
+            <article>
+              <h3>Backend</h3>
+              <p>The frontend sends JSON to Java's built-in HTTP server. The server writes a temp .rpal file and invokes
+                rpal20.</p>
+            </article>
+            <article>
+              <h3>Authors</h3>
+              <p>AHMEDH M.R.R. - 230027U<br>IFAZ M.I.M. - 230253H</p>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <div id="loadingOverlay" class="loading-overlay" hidden>
+    <div class="spinner"></div>
+    <strong>Running interpreter...</strong>
+    <span id="elapsedTime">0.0s</span>
+  </div>
+  <div id="toastHost" class="toast-host" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="script.js"></script>
+</body>
+
+</html>
